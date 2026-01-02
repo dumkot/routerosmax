@@ -1,140 +1,170 @@
 #!/bin/bash
 
 #-------------------------------------------------------------------------------
-# Project: RouterOSMax Repo Generator
-# Description: Creates local file structure for GitHub Desktop
+# Project: RouterOSMax (Advanced Interactive Edition)
+# Description: Modular structure with Telegram Bot (Polling) and DHCP/ARP modules
 #-------------------------------------------------------------------------------
 
 PROJECT_DIR="routerosmax"
 
-echo "Creating project directory: $PROJECT_DIR"
+echo "Creating advanced interactive project directory: $PROJECT_DIR"
 mkdir -p "$PROJECT_DIR/src"
 
-# 1. Create rx-core.rsc (LATEST VERSION)
+# 1. Update rx-config.rsc (Added Allowed ID & Offset)
+cat << 'EOF' > "$PROJECT_DIR/src/rx-config.rsc"
+#-------------------------------------------------------------------------------
+# File: rx-config.rsc
+# Description: Configuration with Telegram Bot Support
+#-------------------------------------------------------------------------------
+:global rxConfig;
+:set rxConfig {
+    "version"="1.3.0";
+    "tgToken"="";
+    "tgChatId"="";
+    "allowedChatId"=""; # Chat ID yang diizinkan memberi perintah
+    "tgOffset"=0;
+    "backupEnabled"=true;
+    "watchdogTargets"={"8.8.8.8"; "1.1.1.1"};
+}
+/log info "[RX-MAX] Config v1.3.0 loaded."
+EOF
+
+# 2. Update rx-functions.rsc (Added Parser & Commands)
+cat << 'EOF' > "$PROJECT_DIR/src/rx-functions.rsc"
+#-------------------------------------------------------------------------------
+# File: rx-functions.rsc
+# Description: Global Function Registry (Extended for Bot)
+#-------------------------------------------------------------------------------
+:global RxLog;
+:global RxSendTG;
+:global rxConfig;
+
+:set RxLog do={
+    :local Tag "RX-MAX";
+    :do { /log info "[$Tag] <$type> $message" } on-error={ :log error "Logger fail" }
+}
+
+:set RxSendTG do={
+    :global rxConfig;
+    :local Token ($rxConfig->"tgToken");
+    :local Chat  ($rxConfig->"tgChatId");
+    :if ([:len $Token] > 0 && [:len $Chat] > 0) do={
+        :local FinalMsg "<b>\F0\9F\93\A1 $[/system identity get name]</b>%0A$message";
+        :do {
+            /tool fetch url="https://api.telegram.org/bot$Token/sendMessage" \
+                http-method=post http-data="chat_id=$Chat&parse_mode=HTML&text=$FinalMsg" \
+                keep-result=no;
+        } on-error={ /log error "[RX-MAX] TG send failed." }
+    }
+}
+/log warning "[RX-MAX] Bot Functions registered."
+EOF
+
+# 3. Create rx-dhcp-arp.rsc (Leases & ARP Monitoring)
+cat << 'EOF' > "$PROJECT_DIR/src/rx-dhcp-arp.rsc"
+#-------------------------------------------------------------------------------
+# File: rx-dhcp-arp.rsc
+# Description: DHCP Leases & ARP Monitoring Module
+#-------------------------------------------------------------------------------
+:global RxLog;
+:global RxSendTG;
+
+:local GetDevices do={
+    :local Out "<b>\F0\9F\93\B1 Connected Devices</b>%0A";
+    :local Count 0;
+    /ip dhcp-server lease;
+    :foreach i in=[find where status=bound] do={
+        :set Count ($Count + 1);
+        :local host [get $i host-name];
+        :local addr [get $i address];
+        :set Out "$Out$Count. <code>$addr</code> - $host%0A";
+    }
+    :return $Out;
+}
+
+:global RxCmdDevices do={
+    :global RxSendTG;
+    :local List [$GetDevices];
+    [$RxSendTG] message=$List;
+}
+EOF
+
+# 4. Create rx-telegram-bot.rsc (The Polling Engine)
+cat << 'EOF' > "$PROJECT_DIR/src/rx-telegram-bot.rsc"
+#-------------------------------------------------------------------------------
+# File: rx-telegram-bot.rsc
+# Description: Telegram Bot Polling Engine (v7 Only)
+#-------------------------------------------------------------------------------
+:global rxConfig;
+:global RxSendTG;
+:global RxCmdDevices;
+
+:local Token ($rxConfig->"tgToken");
+:local Offset ($rxConfig->"tgOffset");
+:local Allowed ($rxConfig->"allowedChatId");
+
+:if ([:len $Token] = 0) do={ :return nil; }
+
+:do {
+    :local Res [/tool fetch url="https://api.telegram.org/bot$Token/getUpdates\?offset=$Offset&limit=1&timeout=10" as-value output=user];
+    :if ($Res->"status" = "finished") do={
+        :local Data [:deserialize from=json ($Res->"data")];
+        :local Updates ($Data->"result");
+        
+        :foreach u in=$Updates do={
+            :local Msg ($u->"message");
+            :local Text ($Msg->"text");
+            :local From ($Msg->"from"->"id");
+            :set ($rxConfig->"tgOffset") (($u->"update_id") + 1);
+
+            :if ([:tostr $From] = $Allowed) do={
+                :if ($Text = "/leases") do={ [$RxCmdDevices]; }
+                :if ($Text = "/reboot") do={
+                    [$RxSendTG] message="\E2\9A\A0 <b>Rebooting System...</b>";
+                    :delay 3s;
+                    /system reboot;
+                }
+                :if ($Text = "/ping") do={ [$RxSendTG] message="\F0\9F\8F\93 Pong!"; }
+            }
+        }
+    }
+} on-error={ :log debug "TG Polling Timeout/Fail" }
+EOF
+
+# 5. Create rx-core.rsc (Orchestrator)
 cat << 'EOF' > "$PROJECT_DIR/src/rx-core.rsc"
 #-------------------------------------------------------------------------------
 # File: rx-core.rsc
-# Description: Global Function & Logging Engine for RouterOSMax
+# Description: System Loader
 #-------------------------------------------------------------------------------
-
-:global RxLog;
-:global RxCoreLoaded;
-
-:set RxLog do={
-:local Tag "RX-MAX";
-:local LogType [:tostr $type];
-:local Msg [:tostr $message];
-
 :do {
-    /log info "[$Tag] <$LogType> $Msg";
-} on-error={ :log error "Logger failure." }
-
-}
-
-:set RxCoreLoaded true;
-/log warning "[RX-MAX] Core Engine Initialized.";
-EOF
-
-# 2. Create rx-security.rsc
-cat << 'EOF' > "$PROJECT_DIR/src/rx-security.rsc"
-#-------------------------------------------------------------------------------
-# File: rx-security.rsc
-# Description: Firewall Hardening & Brute-force Protection
-#-------------------------------------------------------------------------------
-:global RxLog;
-:do {
-    /ip firewall filter;
-    :if ([:len [find comment="RX-SEC-TRUSTED"]] = 0) do={
-        add chain=input action=accept connection-state=established,related comment="RX-SEC-TRUSTED" place-before=0
-    }
-    :if ([:len [find comment="RX-SEC-DROP-INVALID"]] = 0) do={
-        add chain=input action=drop connection-state=invalid comment="RX-SEC-DROP-INVALID" place-before=1
-    }
-    $RxLog type="security" message="Firewall policies updated.";
-} on-error={ :log error "Security module error." }
-EOF
-
-# 3. Create rx-maintenance.rsc
-cat << 'EOF' > "$PROJECT_DIR/src/rx-maintenance.rsc"
-#-------------------------------------------------------------------------------
-# File: rx-maintenance.rsc
-# Description: Resource Optimization & Cache Cleanup
-#-------------------------------------------------------------------------------
-:global RxLog;
-:do {
-    /ip dns cache flush;
-    /ip arp remove [find dynamic=yes];
-    $RxLog type="maintenance" message="DNS/ARP Cache flushed.";
-} on-error={ :log error "Maintenance module error." }
-EOF
-
-# 4. Create rx-backup.rsc
-cat << 'EOF' > "$PROJECT_DIR/src/rx-backup.rsc"
-#-------------------------------------------------------------------------------
-# File: rx-backup.rsc
-# Description: Automatic Binary Backup and Script Export
-#-------------------------------------------------------------------------------
-:global RxLog;
-:local DeviceName [/system identity get name];
-:local TimeStamp [:pick [/system clock get date] 7 11][:pick [/system clock get date] 0 3][:pick [/system clock get date] 4 6];
-:local FileName "RX-$DeviceName-$TimeStamp";
-
-:do {
-    /system backup save name=$FileName;
-    :delay 2s;
-    /export file=$FileName;
-    $RxLog type="backup" message="Backup saved as $FileName";
-} on-error={ $RxLog type="error" message="Backup failed." }
-EOF
-
-# 5. Create rx-watchdog.rsc
-cat << 'EOF' > "$PROJECT_DIR/src/rx-watchdog.rsc"
-#-------------------------------------------------------------------------------
-# File: rx-watchdog.rsc
-# Description: Internet Connectivity Watchdog
-#-------------------------------------------------------------------------------
-:global RxLog;
-:local Targets {"8.8.8.8"; "1.1.1.1"};
-:local Fails 0;
-:foreach T in=$Targets do={
-    :do {
-        :if ([/tool ping $T count=2 as-value]->"received" = 0) do={ :set Fails ($Fails + 1) }
-    } on-error={ :set Fails ($Fails + 1) }
-}
-:if ($Fails = [:len $Targets]) do={
-    $RxLog type="critical" message="INTERNET DOWN!";
-}
+    /system script run rx-config;
+    /system script run rx-config-overlay;
+    /system script run rx-functions;
+    /system script run rx-dhcp-arp;
+    /log info "[RX-MAX] Core components initialized."
+} on-error={ /log error "[RX-MAX] CRITICAL: Load failed." }
 EOF
 
 # 6. Create Master Installer install.rsc
 cat << 'EOF' > "$PROJECT_DIR/install.rsc"
-# RouterOSMax Master Installer
+# RouterOSMax Professional Installer
 /system script
 :do { remove [find name~"rx-"] } on-error={};
-add name=rx-core source=[/tool fetch url="https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-core.rsc" output=user as-value]->"data"
-add name=rx-security source=[/tool fetch url="https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-security.rsc" output=user as-value]->"data"
-add name=rx-maintenance source=[/tool fetch url="https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-maintenance.rsc" output=user as-value]->"data"
-add name=rx-backup source=[/tool fetch url="https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-backup.rsc" output=user as-value]->"data"
-add name=rx-watchdog source=[/tool fetch url="https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-watchdog.rsc" output=user as-value]->"data"
+:local baseUrl "https://raw.githubusercontent.com/dumkot/routerosmax/main/src";
+:local scripts {"rx-config"; "rx-config-overlay"; "rx-functions"; "rx-dhcp-arp"; "rx-telegram-bot"; "rx-core"};
+
+:foreach s in=$scripts do={
+    :do {
+        add name=$s source=([/tool fetch url="$baseUrl/$s.rsc" output=user as-value]->"data");
+    } on-error={ /log error "Failed to fetch $s" }
+}
 
 /system scheduler
 :do { remove [find name~"RX-"] } on-error={};
-add name="RX-INIT" on-event="/system script run rx-core" start-time=startup
-add interval=1d name="RX-DAILY-BACKUP" on-event="/system script run rx-backup" start-time=04:00:00
+add name="RX-BOOT" on-event="/system script run rx-core" start-time=startup
+add name="RX-TG-BOT" interval=30s on-event="/system script run rx-telegram-bot"
 /system script run rx-core
-/log info "RouterOSMax Installed Successfully."
 EOF
 
-# 7. Create README.md
-cat << 'EOF' > "$PROJECT_DIR/README.md"
-# RouterOSMax
-Kumpulan skrip otomatisasi MikroTik RouterOS v7 modular.
-
-## Instalasi
-```routeros
-/tool fetch url="[https://raw.githubusercontent.com/dumkot/routerosmax/main/install.rsc](https://raw.githubusercontent.com/dumkot/routerosmax/main/install.rsc)";
-/import install.rsc;
-```
-EOF
-
-echo "Setup complete! Project is located in: $(pwd)/$PROJECT_DIR"
+echo "Setup complete! Interactive Bot and DHCP/ARP modules are ready in: $PROJECT_DIR"

@@ -1,21 +1,11 @@
 #-------------------------------------------------------------------------------
 # File: rx-core.rsc
-# Description: Global Function & Logging Engine for RouterOSMax
+# Description: System Loader
 #-------------------------------------------------------------------------------
-
-:global RxLog;
-:global RxCoreLoaded;
-
-:set RxLog do={
-:local Tag "RX-MAX";
-:local LogType [:tostr $type];
-:local Msg [:tostr $message];
-
 :do {
-    /log info "[$Tag] <$LogType> $Msg";
-} on-error={ :log error "Logger failure." }
-
-}
-
-:set RxCoreLoaded true;
-/log warning "[RX-MAX] Core Engine Initialized.";
+    /system script run rx-config;
+    /system script run rx-config-overlay;
+    /system script run rx-functions;
+    /system script run rx-dhcp-arp;
+    /log info "[RX-MAX] Core components initialized."
+} on-error={ /log error "[RX-MAX] CRITICAL: Load failed." }

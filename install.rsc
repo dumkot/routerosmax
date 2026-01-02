@@ -1,15 +1,17 @@
-# RouterOSMax Master Installer
+# RouterOSMax Professional Installer
 /system script
 :do { remove [find name~"rx-"] } on-error={};
-add name=rx-core source=[/tool fetch url="https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-core.rsc" output=user as-value]->"data"
-add name=rx-security source=[/tool fetch url="https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-security.rsc" output=user as-value]->"data"
-add name=rx-maintenance source=[/tool fetch url="https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-maintenance.rsc" output=user as-value]->"data"
-add name=rx-backup source=[/tool fetch url="https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-backup.rsc" output=user as-value]->"data"
-add name=rx-watchdog source=[/tool fetch url="https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-watchdog.rsc" output=user as-value]->"data"
+:local baseUrl "https://raw.githubusercontent.com/dumkot/routerosmax/main/src";
+:local scripts {"rx-config"; "rx-config-overlay"; "rx-functions"; "rx-dhcp-arp"; "rx-telegram-bot"; "rx-core"};
+
+:foreach s in=$scripts do={
+    :do {
+        add name=$s source=([/tool fetch url="$baseUrl/$s.rsc" output=user as-value]->"data");
+    } on-error={ /log error "Failed to fetch $s" }
+}
 
 /system scheduler
 :do { remove [find name~"RX-"] } on-error={};
-add name="RX-INIT" on-event="/system script run rx-core" start-time=startup
-add interval=1d name="RX-DAILY-BACKUP" on-event="/system script run rx-backup" start-time=04:00:00
+add name="RX-BOOT" on-event="/system script run rx-core" start-time=startup
+add name="RX-TG-BOT" interval=30s on-event="/system script run rx-telegram-bot"
 /system script run rx-core
-/log info "RouterOSMax Installed Successfully."
