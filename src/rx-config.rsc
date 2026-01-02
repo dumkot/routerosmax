@@ -1,15 +1,17 @@
 #-------------------------------------------------------------------------------
 # File: rx-config.rsc
-# Description: Configuration with Telegram Bot Support
+# Description: Central Configuration Map
 #-------------------------------------------------------------------------------
 :global rxConfig;
 :set rxConfig {
-    "version"="1.3.0";
+    "version"="1.7.0";
     "tgToken"="";
     "tgChatId"="";
-    "allowedChatId"=""; # Chat ID yang diizinkan memberi perintah
+    "allowedChatId"="";
     "tgOffset"=0;
-    "backupEnabled"=true;
-    "watchdogTargets"={"8.8.8.8"; "1.1.1.1"};
+    "trafficInterface"="ether1";
+    "netwatchTarget"="8.8.8.8";
+    "collectWireless"=true;
+    "adblockUrl"="https://raw.githubusercontent.com/notracking/hosts-blocklists/master/hostnames.txt";
 }
-/log info "[RX-MAX] Config v1.3.0 loaded."
+/log info "[RX-MAX] Global configuration initialized."
