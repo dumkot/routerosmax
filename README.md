@@ -21,8 +21,8 @@
 Jalankan perintah berikut di Terminal MikroTik (Winbox/SSH). Pastikan router terhubung ke internet.
 
 ```bash
-/tool fetch url="[https://raw.githubusercontent.com/dumkot/routerosmax/main/install.rsc](https://raw.githubusercontent.com/dumkot/routerosmax/main/install.rsc)" mode=https;
-:delay 2s;
+/tool fetch url="https://raw.githubusercontent.com/dumkot/routerosmax/main/install.rsc" check-certificate=yes;
+:delay 3s;
 /import install.rsc;
 
 ```
