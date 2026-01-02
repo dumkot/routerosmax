@@ -50,7 +50,7 @@ Bash
 
 /tool fetch url="[https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-core.rsc](https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-core.rsc)" mode=https dst-path="rx-core.rsc"
 /tool fetch url="[https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-config.rsc](https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-config.rsc)" mode=https dst-path="rx-config.rsc"
-# Ulangi untuk file lainnya...
+# Ulangi untuk file lainnya (rx-functions, rx-telegram-bot, dll)...
 ⚙️ Konfigurasi (Wajib)
 Sistem tidak akan berjalan sebelum Anda mengonfigurasi rx-config-overlay.
 
