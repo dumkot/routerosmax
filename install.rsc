@@ -1,4 +1,4 @@
-# RouterOSMax Master Installer (Fixed Version)
+# RouterOSMax Master Installer (Fixed & Clean)
 /system script
 :do { remove [find name~"rx-"] } on-error={};
 
@@ -9,16 +9,16 @@
     :do {
         /tool fetch url="$baseUrl/$s.rsc" dst-path="$s.rsc" mode=https;
         :delay 1s;
+        # Menghapus script lama jika ada sebelum import
+        /system script remove [find name=$s];
         /import "$s.rsc";
         /file remove "$s.rsc";
-    } on-error={ :put "Gagal mengunduh $s" }
+    } on-error={ :put "Gagal tarik modul: $s" }
 }
 
 /system scheduler
 :do { remove [find name~"RX-"] } on-error={};
-add name="RX-BOOT" on-event="/system script run rx-core" start-time=startup policy=read,write,policy,test,sensitive
-add name="RX-BOT" interval=25s on-event="/system script run rx-telegram-bot" policy=read,write,policy,test,sensitive
+/system scheduler add name="RX-BOOT" on-event="/system script run rx-core" start-time=startup policy=read,write,policy,test,sensitive;
+/system scheduler add name="RX-BOT" interval=25s on-event="/system script run rx-telegram-bot" policy=read,write,policy,test,sensitive;
 
-:delay 2s;
-/system script run rx-core;
-:put "INSTALASI SELESAI. SEMUA MODUL TERPASANG.";
+:put "BERES. File src sudah di-import jadi System Script.";
