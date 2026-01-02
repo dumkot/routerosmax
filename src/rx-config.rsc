@@ -1,17 +1,15 @@
-#-------------------------------------------------------------------------------
-# File: rx-config.rsc
-# Description: Central Configuration Map
-#-------------------------------------------------------------------------------
+# Nama Script: rx-config
+# Deskripsi: Definisi Variabel Global (Default Values)
+
 :global rxConfig;
-:set rxConfig {
-    "version"="1.7.0";
+:set $rxConfig {
     "tgToken"="";
     "tgChatId"="";
     "allowedChatId"="";
-    "tgOffset"=0;
-    "trafficInterface"="ether1";
+    "pollInterval"="10s";
+    "botOffset"=0;
     "netwatchTarget"="8.8.8.8";
     "collectWireless"=true;
-    "adblockUrl"="https://raw.githubusercontent.com/notracking/hosts-blocklists/master/hostnames.txt";
-}
-/log info "[RX-MAX] Global configuration initialized."
+    "debugMode"=false
+};
+:log info "[RX-MAX] Default configuration loaded.";

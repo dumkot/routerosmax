@@ -1,12 +1,20 @@
-#-------------------------------------------------------------------------------
-# File: rx-system.rsc
-# Description: System Diagnostics (v7 Health)
-#-------------------------------------------------------------------------------
+# Nama Script: rx-system
+# Deskripsi: Mengambil data resource router
+
 :global RxSendTG;
 :global RxCmdHealth do={
     :local cpu [/system resource get cpu-load];
-    :local mem ([/system resource get free-memory] / 1048576);
+    :local memTotal ([/system resource get total-memory] / 1048576);
+    :local memFree ([/system resource get free-memory] / 1048576);
+    :local uptime [/system resource get uptime];
+    :local volt "N/A";
     :local temp "N/A";
-    :do { :set temp [/system health get [find name="temperature"] value]; } on-error={ :set temp "?" };
-    $RxSendTG message="\F0\9F\92\A1 <b>Health Check</b>%0ACPU: $cpu%%0AFree RAM: $mem MB%0ATemp: $temp C";
+
+    # Error handling untuk perangkat yang tidak punya sensor (misal CHR/VM)
+    :do { :set volt ([/system health get voltage] / 10); } on-error={}
+    :do { :set temp [/system health get temperature]; } on-error={}
+
+    :local msg "📊 <b>System Health</b>\n\nCPU Load: $cpu%\nRAM: $memFree MB / $memTotal MB\nUptime: $uptime\nVolt: $volt V\nTemp: $temp C";
+    
+    $RxSendTG message=$msg;
 }

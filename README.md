@@ -1,78 +1,110 @@
-# RouterOSMax 🚀
+# RouterOSMax: High-Performance Network Automation Framework 🚀
 
-![RouterOS](https://img.shields.io/badge/RouterOS-v7.x-blue?style=for-the-badge&logo=mikrotik)
+![RouterOS](https://img.shields.io/badge/RouterOS-v7.10%2B-blue?style=for-the-badge&logo=mikrotik)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Stable-success?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Production-success?style=for-the-badge)
+![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)
 
-**RouterOSMax** adalah framework otomatisasi modular untuk MikroTik RouterOS v7. Dirancang untuk stabilitas, efisiensi CPU, dan manajemen jaringan modern dengan integrasi Telegram Bot interaktif.
+**RouterOSMax** adalah kerangka kerja (framework) otomatisasi jaringan berbasis **MikroTik RouterOS v7 Native**. Proyek ini dirancang untuk menggantikan skrip monolitik tua dengan arsitektur modular yang efisien CPU, aman, dan mudah dikelola.
 
-Terinspirasi oleh `eworm-de`, namun dioptimalkan khusus untuk fitur native RouterOS v7 seperti REST API, JSON deserialization, dan WifiWave2.
+Menggunakan fitur modern v7 seperti `:deserialize` untuk parsing JSON dan REST API handling, RouterOSMax menjembatani router Anda dengan notifikasi real-time via Telegram tanpa membebani resource.
 
 ## ✨ Fitur Unggulan
 
-| Modul | Deskripsi |
+| Fitur | Deskripsi Teknis |
 | :--- | :--- |
-| **🤖 Telegram Bot** | Kontrol terminal via chat. Mendukung `/reboot`, `/health`, dll. |
-| **📶 Hybrid WiFi** | Mendukung audit keamanan untuk **Wireless (Legacy)** dan **WifiWave2 (AX)**. |
-| **👁️ Smart Netwatch** | Notifikasi *real-time* status internet (UP/DOWN) dengan durasi. |
-| **🛡️ Modular Core** | Arsitektur skrip terpisah. Gagal satu modul tidak mematikan sistem. |
-| **📊 Diagnostics** | Monitoring suhu CPU, Voltase, dan Penggunaan RAM via Telegram. |
+| **🤖 Telegram Bot v2** | Engine polling asinkron dengan parsing JSON native (Anti-Regex). Mendukung command CLI interaktif. |
+| **🛡️ Modular Core** | Kode terpisah antara *Config*, *Core*, dan *Modules*. Satu modul error tidak akan mematikan sistem (Fail-safe). |
+| **📶 Hybrid WiFi Audit** | Mendukung monitoring user untuk interface `wireless` (Legacy) dan `wifi` (WifiWave2/AX) sekaligus. |
+| **👁️ Smart Netwatch** | Monitoring koneksi internet *recursive* dengan notifikasi status UP/DOWN real-time. |
+| **🔒 Secure Overlay** | Konfigurasi user terpisah di `rx-config-overlay`. Aman untuk update core tanpa kehilangan setting. |
 
-## 📦 Instalasi
+## 📂 Struktur Repositori
 
-Cara termudah untuk menginstal RouterOSMax adalah melalui Terminal MikroTik. Pastikan router terhubung ke internet.
+```text
+/
+├── src/
+│   ├── rx-core.rsc         # Bootloader utama (Run this first!)
+│   ├── rx-config.rsc       # Deklarasi variabel default (Read-only)
+│   ├── rx-config-overlay.rsc # User Configuration (EDIT THIS)
+│   ├── rx-functions.rsc    # Library fungsi global (API & Logging)
+│   ├── rx-telegram-bot.rsc # Engine polling & parser perintah
+│   ├── rx-system.rsc       # Modul Health Check & Diagnostics
+│   ├── rx-mod-netwatch.rsc # Modul Monitoring Internet
+│   └── rx-mod-wireless.rsc # Modul Logging Client Wifi
+└── README.md
+🚀 Instalasi & Deployment
+Karena RouterOS tidak mendukung git clone langsung, gunakan cara berikut untuk deployment cepat.
 
-1.  **Buka Terminal** di Winbox atau SSH.
-2.  **Copy-Paste** perintah berikut:
+Opsi 1: Copy-Paste (Direkomendasikan)
+Buka Winbox -> System -> Scripts.
 
-```routeros
-/tool fetch url="[https://raw.githubusercontent.com/dumkot/routerosmax/main/install.rsc](https://raw.githubusercontent.com/dumkot/routerosmax/main/install.rsc)" mode=https;
-/import install.rsc;
-```
+Buat script baru sesuai nama file di folder src/ (contoh: rx-core, rx-functions, dll).
 
-*Skrip akan otomatis mengunduh semua modul yang diperlukan dan membuat scheduler.*
+Copy isi source code dari repo ini ke masing-masing script.
 
-## ⚙️ Konfigurasi (Wajib)
+Opsi 2: CLI Download (Jika repo publik)
+Jalankan perintah ini di Terminal RouterOS untuk mengunduh file inti (pastikan URL raw sesuai branch main Anda):
 
-Agar bot Telegram berfungsi, Anda harus memasukkan Token dan Chat ID Anda. **Jangan edit file inti!** Gunakan file overlay agar konfigurasi Anda aman saat update.
+Bash
 
-1.  Buka menu **System -> Scripts**.
-2.  Cari script bernama `rx-config-overlay`.
-3.  Edit dan hilangkan tanda komentar (`#`) pada baris konfigurasi:
+/tool fetch url="[https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-core.rsc](https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-core.rsc)" mode=https dst-path="rx-core.rsc"
+/tool fetch url="[https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-config.rsc](https://raw.githubusercontent.com/dumkot/routerosmax/main/src/rx-config.rsc)" mode=https dst-path="rx-config.rsc"
+# Ulangi untuk file lainnya...
+⚙️ Konfigurasi (Wajib)
+Sistem tidak akan berjalan sebelum Anda mengonfigurasi rx-config-overlay.
 
-```routeros
-# Contoh isi rx-config-overlay
+Buka script rx-config-overlay.
+
+Edit parameter berikut sesuai data Anda:
+
+Cuplikan kode
+
+# rx-config-overlay
 :global rxConfig;
 
-# Masukkan Token Bot dari @BotFather
+# 1. Token Bot Telegram (Dari @BotFather)
 :set ($rxConfig->"tgToken") "123456789:AAFwxxxxxxxxxxxxxxxxx";
 
-# Masukkan Chat ID Anda (bisa didapat dari @userinfobot)
+# 2. Chat ID Admin (Dari @userinfobot)
 :set ($rxConfig->"tgChatId") "987654321";
 
-# Masukkan ID Anda lagi untuk izin eksekusi perintah (Keamanan)
+# 3. Whitelist ID (Untuk izin eksekusi perintah)
 :set ($rxConfig->"allowedChatId") "987654321";
-```
 
-4.  Simpan dan jalankan script `rx-core` atau reboot router.
+# 4. Target Monitoring Internet
+:set ($rxConfig->"netwatchTarget") "1.1.1.1";
+Jalankan Bootloader untuk menerapkan perubahan:
 
-## 🎮 Perintah Bot Telegram
+Bash
 
-Kirim perintah berikut ke bot Anda:
+/system script run rx-core
+🎮 Daftar Perintah Bot
+Kirim perintah berikut ke Bot Telegram Anda:
 
-| Perintah | Fungsi |
-| :--- | :--- |
-| `/health` | Menampilkan beban CPU, Sisa RAM, dan Suhu Perangkat. |
-| `/reboot` | Merestart router (dengan jeda pengaman 2 detik). |
-| `/check` | (Opsional) Memeriksa update firmware RouterOS. |
+/health — Cek status CPU, RAM, Voltase, dan Suhu.
 
-## 📂 Struktur File
+/reboot — Restart router (dengan jeda pengaman 3 detik).
 
-* `src/rx-core.rsc`: *Bootloader* utama.
-* `src/rx-config.rsc`: *Default values*.
-* `src/rx-functions.rsc`: Library global (Logging & Telegram API).
-* `src/rx-telegram-bot.rsc`: *Polling engine* (getUpdates).
-* `install.rsc`: Skrip instalasi otomatis.
+/check — (Dev) Cek koneksi API manual.
 
----
-**Disclaimer:** Gunakan dengan risiko sendiri. Selalu backup konfigurasi sebelum menerapkan skrip otomatisasi.
+🛠️ Troubleshooting
+Q: Bot tidak merespons perintah?
+
+Cek apakah Scheduler berjalan: /system scheduler print.
+
+Pastikan Token dan ChatID benar di rx-config-overlay.
+
+Cek Log: /log print where topics~"RX-MAX".
+
+Q: Error "Script usage not permitted"?
+
+Pastikan script memiliki permission: read, write, policy, test, sensitive.
+
+Q: Monitoring Wifi tidak muncul?
+
+Pastikan parameter :set ($rxConfig->"collectWireless") true; aktif di overlay.
+
+Disclaimer: Gunakan dengan risiko Anda sendiri. Selalu lakukan backup konfigurasi sebelum menerapkan skrip otomatisasi.
+
+Maintainer: Dumkot
