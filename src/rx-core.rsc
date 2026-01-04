@@ -35,7 +35,7 @@
     :global RxSendTG;
     :global rxConfig;
     :if ([:len ($rxConfig->"tgToken")] > 10) do={
-        $RxSendTG message="🚀 <b>System Boot</b>\nRouterOSMax Core telah dimuat ulang.";
+        $RxSendTG message="System Boot\nRouterOSMax Core telah dimuat ulang.";}
     }
 
 } on-error={
