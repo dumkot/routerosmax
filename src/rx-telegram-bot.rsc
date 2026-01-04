@@ -35,7 +35,7 @@
             # Routing Perintah
             :if ($text = "/health") do={ [$RxCmdHealth]; }
             :if ($text = "/reboot") do={ 
-                $RxSendTG message="System Reboot Melakukan restart dalam 3 detik...";}
+                $RxSendTG message="System Reboot Melakukan restart dalam 3 detik...";
                 :delay 3s; 
                 /system reboot; 
             }
