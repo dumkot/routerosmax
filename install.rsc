@@ -1,5 +1,5 @@
 # RouterOSMax Master Installer - FIXED LOGIC
-/system script :do { remove [find name~"rx-"] } on-error={};
+:do { /system script remove [find name="rx-"] } on-error={}
 
 :local baseUrl "https://raw.githubusercontent.com/dumkot/routerosmax/main/src";
 :local scripts {"rx-config"; "rx-config-overlay"; "rx-functions"; "rx-mod-wireless"; "rx-mod-netwatch"; "rx-system"; "rx-telegram-bot"; "rx-core"};
