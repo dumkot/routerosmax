@@ -12,7 +12,7 @@
 
     # Error handling untuk perangkat yang tidak punya sensor (misal CHR/VM)
     :do { :local vid [/system health find where name="voltage"]; :if ([:len $vid] > 0) do={ :set volt ([/system health get $vid value] / 10); } } on-error={}
-    :do { :set temp [/system health get temperature]; } on-error={}
+    :do { :local tid [/system health find where name~"temperature"]; :if ([:len $tid] > 0) do={ :set temp [/system health get $tid value]; } } on-error={}
 
     :local msg "System Health\n\nCPU Load: $cpu%\nRAM: $memFree MB / $memTotal MB\nUptime: $uptime\nVolt: $volt V\nTemp: $temp C";
     
