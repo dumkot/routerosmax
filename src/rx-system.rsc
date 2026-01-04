@@ -14,7 +14,7 @@
     :do { :set volt ([/system health get voltage] / 10); } on-error={}
     :do { :set temp [/system health get temperature]; } on-error={}
 
-    :local msg "📊 <b>System Health</b>\n\nCPU Load: $cpu%\nRAM: $memFree MB / $memTotal MB\nUptime: $uptime\nVolt: $volt V\nTemp: $temp C";
+    :local msg "System Health\n\nCPU Load: $cpu%\nRAM: $memFree MB / $memTotal MB\nUptime: $uptime\nVolt: $volt V\nTemp: $temp C";
     
     $RxSendTG message=$msg;
 }
