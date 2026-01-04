@@ -26,6 +26,6 @@
 
 /system scheduler :do { remove [find name~"RX-"] } on-error={};
 /system scheduler add name="RX-BOOT" on-event="/system script run rx-core" start-time=startup;
-/system scheduler add name="RX-BOT" interval=30s on-event="/system script run rx-telegram-bot";
+/system scheduler add name="RX-BOT" interval=30s on-event="/system script run rx-telegram-bot" policy=read,write,test,policy,sensitive,reboot;
 
 :put "INSTALL SELESAI.";
