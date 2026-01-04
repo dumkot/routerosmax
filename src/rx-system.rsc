@@ -11,7 +11,7 @@
     :local temp "N/A";
 
     # Error handling untuk perangkat yang tidak punya sensor (misal CHR/VM)
-    :do { :set volt ([/system health get voltage] / 10); } on-error={}
+    :do { :local vid [/system health find where name="voltage"]; :if ([:len $vid] > 0) do={ :set volt ([/system health get $vid value] / 10); } } on-error={}
     :do { :set temp [/system health get temperature]; } on-error={}
 
     :local msg "System Health\n\nCPU Load: $cpu%\nRAM: $memFree MB / $memTotal MB\nUptime: $uptime\nVolt: $volt V\nTemp: $temp C";
