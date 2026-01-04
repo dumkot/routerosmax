@@ -24,7 +24,7 @@
     } on-error={ :put "Gagal pasang modul: $s" }
 }
 
-/system scheduler :do { remove [find name~"RX-"] } on-error={};
+:do { /system scheduler remove [find name="RX-"] } on-error={};
 /system scheduler add name="RX-BOOT" on-event="/system script run rx-core" start-time=startup;
 /system scheduler add name="RX-BOT" interval=30s on-event="/system script run rx-telegram-bot" policy=read,write,test,policy,sensitive,reboot;
 
