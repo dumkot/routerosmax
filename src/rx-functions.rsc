@@ -26,11 +26,7 @@
         :local Payload ("{\"chat_id\":\"" . $Chat . "\", \"parse_mode\":\"HTML\", \"text\":\"<b>📡 " . $Ident . "</b>\n\n" . $MsgBody . "\"}");
         
         :do {
-            /tool fetch url="https://api.telegram.org/bot$Token/sendMessage" \
-                http-method=post \
-                http-header-field="Content-Type: application/json" \
-                http-data=$Payload \
-                keep-result=no;
+            /tool fetch url=("https://api.telegram.org/bot" . $Token . "/sendMessage") http-method=post http-header-field="Content-Type:application/json" http-data=$Payload output=none keep-result=no;
         } on-error={
             :log warning "[RX-MAX] Gagal mengirim pesan Telegram. Cek koneksi/Token.";
         }
